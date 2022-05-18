@@ -3,6 +3,7 @@
 #include <linux/printk.h>
 #include <linux/module.h>
 #include <linux/wmi.h>
+#include <linux/uaccess.h>
 // procfs stuff
 #include "procfs.c"
 
@@ -234,9 +235,10 @@ static ssize_t acpi_proc_read( struct file *filp, char __user *buff,
     return ret;
 }
 
-static const struct proc_ops proc_acpi_operations = {
-        .proc_read     = acpi_proc_read,
-        .proc_write    = acpi_proc_write,
+static struct file_operations proc_acpi_operations = {
+        .owner = THIS_MODULE,
+        .read  = acpi_proc_read,
+        .write = acpi_proc_write,
 };
 
 static int legion_wmi_probe(struct wmi_device *wdev, const void *context)
@@ -286,7 +288,7 @@ static int legion_wmi_probe(struct wmi_device *wdev, const void *context)
 	return 0;
 }
 
-static void legion_wmi_remove(struct wmi_device *wdev) {
+static int legion_wmi_remove(struct wmi_device *wdev) {
 	int err;
 
 	err = wmi_remove_notify_handler(LEGION_WMI_FAN_MODE_EVENT_GUID);
@@ -299,6 +301,8 @@ static void legion_wmi_remove(struct wmi_device *wdev) {
     remove_proc_entry("legion_call", acpi_root_dir);
 
     dev_info(&wdev->dev, "procfs entry removed\n");
+
+    return 0;
 }
 
 static struct wmi_driver legion_wmi_driver = {
